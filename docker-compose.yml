@@ -1,29 +1,30 @@
-# Tutorial 05: Arquitectura de produccion de 3 capas (Opcion A: SQLite).
+# Tutorial 06: Strangler Pattern (Opcion A: SQLite).
 #
-#   Internet --> [nginx :80] --> [web: Gunicorn/Django :8000] --> SQLite
+#   Internet --> [nginx :80] --+--> /api/v1/ , /  --> [web_django: Gunicorn/Django :8000]
+#                              +--> /api/v2/comprar --> [pagos_flask: Gunicorn/Flask :5000]
 #
-# Nginx es el unico servicio que da la cara a internet (puerto 80).
-# Django queda AISLADO: ya no expone puertos al host, solo Nginx le habla
-# por la red interna de Docker.
+# Nginx es el unico que da la cara a internet. Decide a que backend enviar
+# cada peticion segun la version de la API (el "estrangulamiento").
 
 services:
-  web:
+  web_django:  # El Monolito (v1).
     build: .
-    # CAMBIO 1: usamos Gunicorn en lugar de runserver.
-    # 'Tienda' es la carpeta donde esta wsgi.py (Tienda/wsgi.py).
     command: gunicorn Tienda.wsgi:application --bind 0.0.0.0:8000
     volumes:
-      # Mapeamos el codigo (incluye db.sqlite3) para no reconstruir en cada cambio.
       - .:/app
-    # NOTA: Ya no hay seccion 'ports' aqui. Django esta aislado del exterior.
+    # Aislado: sin 'ports'. Solo Nginx le habla por la red interna.
 
-  # CAMBIO 2: agregamos el servicio Nginx como Proxy Inverso.
-  nginx:
+  pagos_flask:  # El Microservicio (v2) - EL ESTRANGULADOR.
+    build: ./microservicio_pagos
+    ports:
+      - "5000:5000"  # Expuesto solo para pruebas iniciales; luego se puede cerrar.
+
+  nginx:  # Proxy inverso / cerebro del ruteo.
     image: nginx:1.25-alpine
     ports:
-      - "80:80"  # Nginx es el unico que da la cara a internet.
+      - "80:80"
     volumes:
-      # Inyectamos nuestro archivo de configuracion en el contenedor.
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      - web
+      - web_django
+      - pagos_flask
