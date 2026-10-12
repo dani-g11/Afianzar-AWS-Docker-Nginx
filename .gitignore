@@ -1,0 +1,27 @@
+# Entorno virtual (no se sube: cada maquina crea el suyo)
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de datos SQLite local
+db.sqlite3
+db.sqlite3-journal
+
+# Logs
+*.log
+
+# Configuracion de editores / IDE
+.vscode/
+.idea/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Variables de entorno sensibles
+.env

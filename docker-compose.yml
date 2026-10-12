@@ -1,0 +1,14 @@
+# Opcion A: SQLite. Un solo servicio (la app Django).
+# No necesitamos un contenedor de base de datos aparte: SQLite vive en
+# un archivo (db.sqlite3) dentro del propio proyecto.
+
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      # Hot-Reload: mapeamos la carpeta actual para que los cambios de
+      # codigo se reflejen sin reconstruir la imagen.
+      - .:/app
+    ports:
+      - "8000:8000"

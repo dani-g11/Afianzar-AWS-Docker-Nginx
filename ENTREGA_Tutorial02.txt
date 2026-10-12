@@ -1,0 +1,60 @@
+ENTREGA - TUTORIAL 02: PATRONES CREACIONALES EN DJANGO
+
+Autor: Daniel G.
+Asignatura: TEIS / AdS 2026
+
+
+1. PATRON FACTORY METHOD (tienda_app/infra/factories.py)
+
+La fabrica PaymentFactory decide que procesador de pago usar leyendo la
+variable de entorno PAYMENT_PROVIDER:
+
+- Sin variable (o con valor BANCO): usa BancoNacionalProcesador (infraestructura real).
+- Con PAYMENT_PROVIDER=MOCK: usa MockPaymentProcessor (pago de prueba, sin cargo real).
+
+Esto permite cambiar el comportamiento del software sin tocar el codigo,
+solo cambiando la configuracion del entorno ("Docker-Ready").
+
+
+2. PATRON BUILDER (tienda_app/domain/builders.py)
+
+OrdenBuilder arma una Orden paso a paso con una interfaz fluida
+(.con_usuario().con_libro().con_cantidad().para_envio().build()).
+El metodo build() valida los datos y calcula el total con IVA antes de
+persistir la orden.
+
+
+3. REFLEXION: por que el OrdenBuilder reduce el riesgo de errores?
+
+El OrdenBuilder reduce el riesgo de errores porque centraliza en un solo
+lugar la validacion y el calculo necesarios para crear una orden. Si la orden
+se construyera directamente en la vista, cada vista que necesitara crear una
+orden tendria que recordar validar que exista un libro, calcular el total con
+IVA y pasar todos los campos en el orden correcto; cualquier olvido produciria
+ordenes invalidas o con totales mal calculados. Con el Builder, la vista solo
+describe que quiere ("este usuario, este libro, esta direccion") y el metodo
+build() garantiza que la orden solo se cree si los datos son suficientes y que
+el total siempre se calcule igual. Ademas, la interfaz fluida hace el codigo mas
+legible y el metodo reset() evita que datos de una orden anterior se filtren a
+la siguiente, eliminando una fuente tipica de errores dificiles de rastrear.
+
+
+4. EVIDENCIA DE EJECUCION (modo MOCK)
+
+Prueba del Factory seleccionando el procesador segun el entorno:
+
+   # Con PAYMENT_PROVIDER=MOCK
+   Procesador seleccionado: MockPaymentProcessor
+   [DEBUG] Mock Payment: Procesando pago de $150.0 sin cargo real.
+
+   # Sin la variable (por defecto)
+   Procesador por defecto: BancoNacionalProcesador
+
+Comandos para reproducir el modo MOCK (PowerShell en Windows):
+
+   $env:PAYMENT_PROVIDER="MOCK"
+   python manage.py runserver
+
+Luego visitar en el navegador: http://127.0.0.1:8000/compra/2/ y pulsar el
+boton de comprar. La consola del runserver mostrara el mensaje
+[DEBUG] Mock Payment: Procesando pago de $...
